@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f3f7f8;
+  --foreground: #0f1f25;
+  --surface: #ffffff;
+  --surface-soft: #ecf6f4;
+  --brand: #0f766e;
+  --brand-soft: #d8f3ee;
+  --accent: #b45309;
+  --danger: #be123c;
+}
+
+@theme inline {
+  --color-app: var(--background);
+  --color-app-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+body {
+  font-family: var(--font-space-grotesk), sans-serif;
+  background:
+    radial-gradient(circle at 10% 20%, #d5f2ed 0%, transparent 35%),
+    radial-gradient(circle at 85% 0%, #ffedd5 0%, transparent 30%),
+    var(--background);
+  color: var(--foreground);
+}
+
+a {
+  color: inherit;
+}
+
+.surface-card {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  border: 1px solid #d7e2e4;
+  backdrop-filter: blur(4px);
+}

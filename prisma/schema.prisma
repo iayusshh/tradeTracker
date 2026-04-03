@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+}
+
+enum OptionType {
+  CALL
+  PUT
+}
+
+enum PositionSide {
+  BUY
+  SELL
+}
+
+enum ExecutionKind {
+  ENTRY
+  EXIT
+  ADJUSTMENT
+}
+
+enum CommodityDirection {
+  LONG
+  SHORT
+}
+
+model PositionalTradeGroup {
+  id               String      @id @default(cuid())
+  title            String
+  underlyingSymbol String
+  startedAt        DateTime
+  targetDate       DateTime?
+  status           TradeStatus @default(OPEN)
+  notes            String?
+  realizedPnl      Float       @default(0)
+  unrealizedPnl    Float       @default(0)
+  totalPnl         Float       @default(0)
+  legs             OptionLeg[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([startedAt])
+  @@index([status])
+}
+
+model OptionLeg {
+  id         String              @id @default(cuid())
+  groupId    String
+  group      PositionalTradeGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  optionType OptionType
+  side       PositionSide
+  strike     Float
+  expiry     DateTime
+  quantity   Int
+  lotSize    Int                 @default(1)
+  isActive   Boolean             @default(true)
+  executions OptionExecution[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  @@index([groupId])
+  @@index([expiry])
+}
+
+model OptionExecution {
+  id            String        @id @default(cuid())
+  legId         String
+  leg           OptionLeg     @relation(fields: [legId], references: [id], onDelete: Cascade)
+  kind          ExecutionKind
+  executedAt    DateTime
+  optionPrice   Float
+  quantity      Int
+  underlyingLtp Float
+  fees          Float         @default(0)
+  notes         String?
+  createdAt     DateTime      @default(now())
+
+  @@index([legId, executedAt])
+}
+
+model CommodityTrade {
+  id            String             @id @default(cuid())
+  title         String?
+  symbol        String
+  direction     CommodityDirection
+  startedAt     DateTime
+  status        TradeStatus        @default(OPEN)
+  notes         String?
+  realizedPnl   Float              @default(0)
+  unrealizedPnl Float              @default(0)
+  totalPnl      Float              @default(0)
+  executions    CommodityExecution[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([startedAt])
+  @@index([status])
+}
+
+model CommodityExecution {
+  id            String        @id @default(cuid())
+  tradeId       String
+  trade         CommodityTrade @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  kind          ExecutionKind
+  executedAt    DateTime
+  price         Float
+  quantity      Int
+  underlyingLtp Float
+  fees          Float         @default(0)
+  notes         String?
+  createdAt     DateTime      @default(now())
+
+  @@index([tradeId, executedAt])
+}
