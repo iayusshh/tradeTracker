@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { PayoffChart } from "@/components/charts/PayoffChart";
-import { formatInr, pnlColor } from "@/lib/format";
+import { LivePositionalPnl } from "@/components/LivePositionalPnl";
+import { formatInr, pnlColor, statusBadgeClass } from "@/lib/format";
 import { buildPayoffSeries } from "@/lib/math/payoff";
 import { computeOptionLegSnapshot } from "@/lib/math/pnl";
 import { getPositionalGroupById } from "@/lib/server/trade-service";
@@ -42,9 +43,17 @@ export default async function PositionalDetailPage({ params }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">{group.title}</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              {group.underlyingSymbol} • started {format(group.startedAt, "dd MMM yyyy")} • {group.status}
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+              <span>{group.underlyingSymbol}</span>
+              <span>•</span>
+              <span>started {format(group.startedAt, "dd MMM yyyy")}</span>
+              <span className={statusBadgeClass(group.status)}>{group.status}</span>
             </p>
+            {group.notes && (
+              <p className="mt-3 max-w-xl rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 ring-1 ring-slate-200">
+                {group.notes}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total PnL</p>
@@ -59,6 +68,12 @@ export default async function PositionalDetailPage({ params }: Props) {
           <PayoffChart data={chart.points} currentPrice={chart.currentPrice} breakevens={chart.breakevens} />
         </div>
       </section>
+
+      <LivePositionalPnl
+        groupId={group.id}
+        legs={group.legs}
+        status={group.status}
+      />
 
       <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6">
         <h2 className="text-xl font-semibold text-slate-900">Leg snapshots</h2>

@@ -95,7 +95,7 @@ function signedCashflowForCommodity(
   return -notional - fees;
 }
 
-export function computeOptionLegSnapshot(leg: LegWithExecutions): LegSnapshot {
+export function computeOptionLegSnapshot(leg: LegWithExecutions, liveMarkPrice?: number): LegSnapshot {
   const executions = [...leg.executions].sort(
     (a, b) => new Date(a.executedAt).getTime() - new Date(b.executedAt).getTime()
   );
@@ -127,6 +127,11 @@ export function computeOptionLegSnapshot(leg: LegWithExecutions): LegSnapshot {
     }
 
     markPrice = execution.optionPrice;
+  }
+
+  // When a live price is provided and the position is still open, use it as the mark.
+  if (liveMarkPrice !== undefined && openQuantity > 0) {
+    markPrice = liveMarkPrice;
   }
 
   const directionalOpen = leg.side === "BUY" ? openQuantity : -openQuantity;
