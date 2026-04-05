@@ -8,7 +8,7 @@ const addLegSchema = z.object({
   optionType: z.enum(["CALL", "PUT"]),
   side: z.enum(["BUY", "SELL"]),
   strike: z.number().positive(),
-  expiry: z.string().datetime({ offset: true }).or(z.string().date()),
+  expiry: z.string().datetime({ offset: true }).or(z.string().date()).optional(),
   quantity: z.number().int().positive(),
   lotSize: z.number().int().positive(),
 });
@@ -35,7 +35,7 @@ export async function POST(
       optionType: parsed.data.optionType,
       side: parsed.data.side,
       strike: parsed.data.strike,
-      expiry: new Date(parsed.data.expiry),
+      expiry: parsed.data.expiry ? new Date(parsed.data.expiry) : new Date("2099-12-31"),
       quantity: parsed.data.quantity,
       lotSize: parsed.data.lotSize,
     },
@@ -43,8 +43,8 @@ export async function POST(
 
   await refreshPositionalGroupPnl(groupId);
 
-  revalidatePath("/admin");
-  revalidatePath(`/admin/positional/${groupId}`);
+  revalidatePath("/desk");
+  revalidatePath(`/desk/positional/${groupId}`);
   revalidatePath("/positional");
   revalidatePath(`/positional/${groupId}`);
 

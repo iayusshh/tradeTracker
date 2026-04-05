@@ -31,11 +31,23 @@ export function TradeTimelineNav({
     );
   }
 
+  const hasFilter = selectedMonth || selectedWeek;
+
   return (
     <aside className="rounded-2xl border border-slate-200 bg-white/85 p-4 backdrop-blur-sm">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
-        Timeline
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-600">
+          Timeline
+        </h3>
+        {hasFilter && (
+          <Link
+            href={basePath}
+            className="text-xs font-medium text-teal-700 hover:text-teal-600"
+          >
+            Show all
+          </Link>
+        )}
+      </div>
 
       <div className="mt-4 space-y-4">
         {months.map((month) => {

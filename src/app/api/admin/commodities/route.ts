@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     },
   });
 
-  revalidatePath("/admin");
+  revalidatePath("/desk");
   revalidatePath("/commodities");
 
   return NextResponse.json({ id: trade.id }, { status: 201 });

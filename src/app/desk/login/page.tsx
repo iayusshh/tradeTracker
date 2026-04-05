@@ -8,7 +8,7 @@ type Props = {
 
 export default async function AdminLoginPage({ searchParams }: Props) {
   const params = await searchParams;
-  const nextPath = params.next && params.next.startsWith("/") ? params.next : "/admin";
+  const nextPath = params.next && params.next.startsWith("/") ? params.next : "/desk";
 
   return (
     <section className="mx-auto mt-12 max-w-md rounded-3xl border border-slate-200 bg-white p-6">

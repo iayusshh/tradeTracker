@@ -10,7 +10,7 @@ const addExecutionSchema = z.object({
   optionPrice: z.number().positive(),
   quantity: z.number().int().positive(),
   underlyingLtp: z.number().positive(),
-  executedAt: z.string().datetime({ offset: true }).or(z.string().date()),
+  executedAt: z.coerce.date(),
   fees: z.number().min(0).optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
@@ -62,7 +62,7 @@ export async function POST(
       optionPrice: parsed.data.optionPrice,
       quantity: parsed.data.quantity,
       underlyingLtp: parsed.data.underlyingLtp,
-      executedAt: new Date(parsed.data.executedAt),
+      executedAt: parsed.data.executedAt,
       fees: parsed.data.fees ?? 0,
       notes: parsed.data.notes ?? null,
     },
@@ -70,8 +70,8 @@ export async function POST(
 
   await refreshPositionalGroupPnl(groupId);
 
-  revalidatePath("/admin");
-  revalidatePath(`/admin/positional/${groupId}`);
+  revalidatePath("/desk");
+  revalidatePath(`/desk/positional/${groupId}`);
   revalidatePath("/positional");
   revalidatePath(`/positional/${groupId}`);
 

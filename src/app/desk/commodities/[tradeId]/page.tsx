@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { AddCommodityExecutionForm } from "@/components/admin/AddCommodityExecutionForm";
+import { ToggleStatusButton } from "@/components/admin/ToggleStatusButton";
 import { formatInr, pnlColor } from "@/lib/format";
 import { getCommodityTradeById } from "@/lib/server/trade-service";
 
@@ -31,12 +32,19 @@ export default async function AdminCommodityDetailPage({ params }: Props) {
             </p>
           </div>
 
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total PnL</p>
-            <p className={`text-xl font-bold ${pnlColor(trade.totalPnl)}`}>{formatInr(trade.totalPnl)}</p>
-            <p className="text-xs text-slate-500">
-              R: {formatInr(trade.realizedPnl)} | U: {formatInr(trade.unrealizedPnl)}
-            </p>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Total PnL</p>
+              <p className={`text-xl font-bold ${pnlColor(trade.totalPnl)}`}>{formatInr(trade.totalPnl)}</p>
+              <p className="text-xs text-slate-500">
+                R: {formatInr(trade.realizedPnl)} | U: {formatInr(trade.unrealizedPnl)}
+              </p>
+            </div>
+            <ToggleStatusButton
+              id={trade.id}
+              currentStatus={trade.status}
+              patchUrl={`/api/admin/commodities/${trade.id}`}
+            />
           </div>
         </div>
       </section>

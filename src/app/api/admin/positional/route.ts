@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     },
   });
 
-  revalidatePath("/admin");
+  revalidatePath("/desk");
   revalidatePath("/positional");
 
   return NextResponse.json({ id: group.id }, { status: 201 });

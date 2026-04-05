@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { TradeTimelineNav } from "@/components/navigation/TradeTimelineNav";
-import { formatInr, pnlColor } from "@/lib/format";
+import { formatInr, pnlColor, statusBadgeClass } from "@/lib/format";
 import { getPositionalOverview } from "@/lib/server/trade-service";
 import { monthKeyFromDate, weekKeyFromDate } from "@/lib/server/timeline";
 
@@ -60,8 +60,9 @@ export default async function PositionalPage({ searchParams }: Props) {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">{group.title}</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Started {format(group.startedAt, "dd MMM yyyy")} • {group.status}
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                      <span>Started {format(group.startedAt, "dd MMM yyyy")}</span>
+                      <span className={statusBadgeClass(group.status)}>{group.status}</span>
                     </p>
                   </div>
                   <div className={`text-right text-lg font-bold ${pnlColor(group.totalPnl)}`}>

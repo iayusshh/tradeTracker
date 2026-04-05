@@ -48,7 +48,7 @@ export function PositionalGroupForm() {
         return;
       }
 
-      router.push(`/admin/positional/${payload.id}`);
+      router.push(`/desk/positional/${payload.id}`);
       router.refresh();
     } catch {
       setError("Unexpected network issue. Please retry.");

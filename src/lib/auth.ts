@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { timingSafeEqual } from "crypto";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
 import { z } from "zod";
@@ -35,22 +36,39 @@ function getAdminEmail() {
 }
 
 function getAdminPasswordHash() {
-  const hash = process.env.ADMIN_PASSWORD_HASH;
-  if (!hash) {
-    throw new Error("ADMIN_PASSWORD_HASH is not set");
-  }
+  return process.env.ADMIN_PASSWORD_HASH ?? null;
+}
 
-  return hash;
+function getAdminPasswordPlain() {
+  return process.env.ADMIN_PASSWORD ?? null;
+}
+
+function safeEqual(left: string, right: string): boolean {
+  const leftBuf = Buffer.from(left);
+  const rightBuf = Buffer.from(right);
+  if (leftBuf.length !== rightBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(leftBuf, rightBuf);
 }
 
 export async function validateAdminCredentials(email: string, password: string) {
-  const normalizedEmail = email.toLowerCase();
-  if (normalizedEmail !== getAdminEmail()) {
+  const emailMatch = safeEqual(email.toLowerCase(), getAdminEmail());
+  if (!emailMatch) {
     return false;
   }
 
-  const hash = getAdminPasswordHash();
-  return bcrypt.compare(password, hash);
+  const passwordHash = getAdminPasswordHash();
+  if (passwordHash) {
+    return bcrypt.compare(password, passwordHash);
+  }
+
+  const passwordPlain = getAdminPasswordPlain();
+  if (passwordPlain) {
+    return safeEqual(password, passwordPlain);
+  }
+
+  throw new Error("Either ADMIN_PASSWORD_HASH or ADMIN_PASSWORD must be set");
 }
 
 export async function createSessionToken(email: string) {
@@ -109,5 +127,7 @@ export async function getCurrentSession() {
 export function ensureAuthEnv() {
   getAuthSecret();
   getAdminEmail();
-  getAdminPasswordHash();
+  if (!getAdminPasswordHash() && !getAdminPasswordPlain()) {
+    throw new Error("Either ADMIN_PASSWORD_HASH or ADMIN_PASSWORD must be set");
+  }
 }

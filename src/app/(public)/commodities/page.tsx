@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { TradeTimelineNav } from "@/components/navigation/TradeTimelineNav";
-import { formatInr, pnlColor } from "@/lib/format";
+import { formatInr, pnlColor, statusBadgeClass } from "@/lib/format";
 import { getCommodityOverview } from "@/lib/server/trade-service";
 import { monthKeyFromDate, weekKeyFromDate } from "@/lib/server/timeline";
 
@@ -60,8 +60,9 @@ export default async function CommoditiesPage({ searchParams }: Props) {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">{trade.title}</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Started {format(trade.startedAt, "dd MMM yyyy")} • {trade.status}
+                    <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                      <span>Started {format(trade.startedAt, "dd MMM yyyy")}</span>
+                      <span className={statusBadgeClass(trade.status)}>{trade.status}</span>
                     </p>
                   </div>
                   <div className={`text-right text-lg font-bold ${pnlColor(trade.totalPnl)}`}>

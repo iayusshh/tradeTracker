@@ -14,17 +14,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/" className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">
             Public home
           </Link>
-          <Link href="/admin" className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">
+          <Link href="/desk" className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100">
             Dashboard
           </Link>
           <Link
-            href="/admin/positional/new"
+            href="/desk/positional/new"
             className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100"
           >
             New positional
           </Link>
           <Link
-            href="/admin/commodities/new"
+            href="/desk/commodities/new"
             className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100"
           >
             New commodity

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { formatInr, pnlColor } from "@/lib/format";
+import { formatInr, pnlColor, statusBadgeClass } from "@/lib/format";
 import { getCommodityTradeById } from "@/lib/server/trade-service";
 
 export const dynamic = "force-dynamic";
@@ -28,11 +28,19 @@ export default async function CommodityDetailPage({ params }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">{trade.title ?? trade.symbol}</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              {trade.symbol} • {trade.direction} • started {format(trade.startedAt, "dd MMM yyyy")} •
-              {" "}
-              {trade.status}
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+              <span>{trade.symbol}</span>
+              <span>•</span>
+              <span>{trade.direction}</span>
+              <span>•</span>
+              <span>started {format(trade.startedAt, "dd MMM yyyy")}</span>
+              <span className={statusBadgeClass(trade.status)}>{trade.status}</span>
             </p>
+            {trade.notes && (
+              <p className="mt-3 max-w-xl rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 ring-1 ring-slate-200">
+                {trade.notes}
+              </p>
+            )}
           </div>
 
           <div className="text-right">

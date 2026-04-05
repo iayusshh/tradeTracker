@@ -17,6 +17,17 @@ type FormState = {
   notes: string;
 };
 
+function toDateTimeLocalValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function toIsoDateTime(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toISOString();
+}
+
 export function AddCommodityExecutionForm({ tradeId }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +37,7 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
     price: "",
     quantity: "1",
     underlyingLtp: "",
-    executedAt: new Date().toISOString().slice(0, 16),
+    executedAt: toDateTimeLocalValue(new Date()),
     fees: "0",
     notes: "",
   });
@@ -45,7 +56,7 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
           price: Number(state.price),
           quantity: Number(state.quantity),
           underlyingLtp: Number(state.underlyingLtp),
-          executedAt: state.executedAt,
+          executedAt: toIsoDateTime(state.executedAt),
           fees: Number(state.fees),
           notes: state.notes || null,
         }),

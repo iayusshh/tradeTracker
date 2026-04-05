@@ -64,7 +64,7 @@ export default async function PositionalDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 min-w-0">
           <PayoffChart data={chart.points} currentPrice={chart.currentPrice} breakevens={chart.breakevens} />
         </div>
       </section>

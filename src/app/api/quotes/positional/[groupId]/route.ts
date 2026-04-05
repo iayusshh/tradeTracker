@@ -50,17 +50,22 @@ export async function GET(
     return NextResponse.json({}, { headers: { "Cache-Control": "no-store" } });
   }
 
-  const ltpMap = await fetchLegLtps(
-    openLegs.map((leg) => ({
-      id: leg.id,
-      strike: leg.strike,
-      expiry: leg.expiry,
-      optionType: leg.optionType as "CALL" | "PUT",
-    })),
-    group.underlyingSymbol
-  );
+  try {
+    const ltpMap = await fetchLegLtps(
+      openLegs.map((leg) => ({
+        id: leg.id,
+        strike: leg.strike,
+        expiry: leg.expiry,
+        optionType: leg.optionType as "CALL" | "PUT",
+      })),
+      group.underlyingSymbol
+    );
 
-  return NextResponse.json(ltpMap, {
-    headers: { "Cache-Control": "no-store" },
-  });
+    return NextResponse.json(ltpMap, {
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch {
+    // Quote-provider errors should not break desk refreshes.
+    return NextResponse.json({}, { headers: { "Cache-Control": "no-store" } });
+  }
 }

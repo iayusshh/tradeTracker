@@ -16,7 +16,7 @@ export default async function AdminDashboardPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">Positional groups</h2>
-          <Link href="/admin/positional/new" className="text-sm font-semibold text-teal-700">
+          <Link href="/desk/positional/new" className="text-sm font-semibold text-teal-700">
             + Create
           </Link>
         </div>
@@ -28,7 +28,7 @@ export default async function AdminDashboardPage() {
             positional.items.map((group) => (
               <Link
                 key={group.id}
-                href={`/admin/positional/${group.id}`}
+                href={`/desk/positional/${group.id}`}
                 className="block rounded-xl border border-slate-200 p-3 transition hover:bg-slate-50"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -47,7 +47,7 @@ export default async function AdminDashboardPage() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">Commodity trades</h2>
-          <Link href="/admin/commodities/new" className="text-sm font-semibold text-amber-700">
+          <Link href="/desk/commodities/new" className="text-sm font-semibold text-amber-700">
             + Create
           </Link>
         </div>
@@ -59,7 +59,7 @@ export default async function AdminDashboardPage() {
             commodities.items.map((trade) => (
               <Link
                 key={trade.id}
-                href={`/admin/commodities/${trade.id}`}
+                href={`/desk/commodities/${trade.id}`}
                 className="block rounded-xl border border-slate-200 p-3 transition hover:bg-slate-50"
               >
                 <div className="flex items-start justify-between gap-3">

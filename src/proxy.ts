@@ -8,8 +8,8 @@ function unauthorizedApiResponse() {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isLoginRoute = pathname === "/admin/login";
-  const isProtectedPage = pathname.startsWith("/admin") && !isLoginRoute;
+  const isLoginRoute = pathname === "/desk/login";
+  const isProtectedPage = pathname.startsWith("/desk") && !isLoginRoute;
   const isProtectedApi =
     pathname.startsWith("/api/admin") &&
     pathname !== "/api/admin/login" &&
@@ -25,7 +25,7 @@ export async function proxy(request: NextRequest) {
       return unauthorizedApiResponse();
     }
 
-    const loginUrl = new URL("/admin/login", request.url);
+    const loginUrl = new URL("/desk/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -36,7 +36,7 @@ export async function proxy(request: NextRequest) {
       return unauthorizedApiResponse();
     }
 
-    const loginUrl = new URL("/admin/login", request.url);
+    const loginUrl = new URL("/desk/login", request.url);
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -45,5 +45,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/desk/:path*", "/api/admin/:path*"],
 };

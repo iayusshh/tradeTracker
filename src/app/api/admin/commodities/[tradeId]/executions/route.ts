@@ -9,7 +9,7 @@ const addExecutionSchema = z.object({
   price: z.number().positive(),
   quantity: z.number().int().positive(),
   underlyingLtp: z.number().positive(),
-  executedAt: z.string().datetime({ offset: true }).or(z.string().date()),
+  executedAt: z.coerce.date(),
   fees: z.number().min(0).optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
@@ -56,7 +56,7 @@ export async function POST(
       price: parsed.data.price,
       quantity: parsed.data.quantity,
       underlyingLtp: parsed.data.underlyingLtp,
-      executedAt: new Date(parsed.data.executedAt),
+      executedAt: parsed.data.executedAt,
       fees: parsed.data.fees ?? 0,
       notes: parsed.data.notes ?? null,
     },
@@ -64,8 +64,8 @@ export async function POST(
 
   await refreshCommodityTradePnl(tradeId);
 
-  revalidatePath("/admin");
-  revalidatePath(`/admin/commodities/${tradeId}`);
+  revalidatePath("/desk");
+  revalidatePath(`/desk/commodities/${tradeId}`);
   revalidatePath("/commodities");
   revalidatePath(`/commodities/${tradeId}`);
 

@@ -54,8 +54,8 @@ export async function PATCH(
 
   await refreshCommodityTradePnl(tradeId);
 
-  revalidatePath("/admin");
-  revalidatePath(`/admin/commodities/${tradeId}`);
+  revalidatePath("/desk");
+  revalidatePath(`/desk/commodities/${tradeId}`);
   revalidatePath("/commodities");
   revalidatePath(`/commodities/${tradeId}`);
 

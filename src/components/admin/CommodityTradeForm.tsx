@@ -48,7 +48,7 @@ export function CommodityTradeForm() {
         return;
       }
 
-      router.push(`/admin/commodities/${payload.id}`);
+      router.push(`/desk/commodities/${payload.id}`);
       router.refresh();
     } catch {
       setError("Unexpected network issue. Please retry.");

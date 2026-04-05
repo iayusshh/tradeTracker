@@ -65,8 +65,8 @@ export async function PATCH(
 
   await refreshPositionalGroupPnl(groupId);
 
-  revalidatePath("/admin");
-  revalidatePath(`/admin/positional/${groupId}`);
+  revalidatePath("/desk");
+  revalidatePath(`/desk/positional/${groupId}`);
   revalidatePath("/positional");
   revalidatePath(`/positional/${groupId}`);
 

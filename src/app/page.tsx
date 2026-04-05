@@ -40,15 +40,16 @@ export default function Home() {
           </Link>
 
           <Link
-            href="/admin"
+            href="/desk"
             className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <p className="text-sm font-semibold text-slate-600">Private Section</p>
-            <h2 className="mt-2 text-xl font-bold text-slate-900">Admin Console</h2>
+            <h2 className="mt-2 text-xl font-bold text-slate-900">Desk Console</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Add legs, capture LTP at entry/exit, and keep public performance pages current.
+              Manage legs, executions, and status updates for all strategies.
             </p>
           </Link>
+
         </div>
       </header>
     </main>
