@@ -121,7 +121,10 @@ export function buildPayoffSeries({
   }
 
   const strikes = legs.map((leg) => leg.strike);
-  const prices = createPriceGrid(currentPrice, strikes);
+  const strikeMid = strikes.reduce((sum, strike) => sum + strike, 0) / strikes.length;
+  const normalizedCurrentPrice =
+    Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : strikeMid;
+  const prices = createPriceGrid(normalizedCurrentPrice, strikes);
   const effectiveTargetDate = targetDate ?? addDays(new Date(), 5);
 
   const points = prices.map((price) => {
@@ -152,7 +155,7 @@ export function buildPayoffSeries({
 
       const daysToExpiryNow = Math.max(0, differenceInCalendarDays(leg.expiry, new Date()));
       const daysToExpiryAtTarget = Math.max(0, differenceInCalendarDays(leg.expiry, effectiveTargetDate));
-      const intrinsicAtCurrent = intrinsicValue(leg.optionType, leg.strike, currentPrice);
+      const intrinsicAtCurrent = intrinsicValue(leg.optionType, leg.strike, normalizedCurrentPrice);
 
       const remainingTimeValue = estimateRemainingTimeValue({
         entryPrice: snapshot.averageEntryPrice,
@@ -181,6 +184,6 @@ export function buildPayoffSeries({
   return {
     points,
     breakevens: findBreakevens(points),
-    currentPrice,
+    currentPrice: round(normalizedCurrentPrice),
   };
 }

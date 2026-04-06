@@ -77,6 +77,8 @@ export async function PATCH(request: Request, context: Context) {
   });
 
   await refreshPositionalGroupPnl(groupId);
+  revalidatePath("/desk");
+  revalidatePath("/positional");
   revalidatePath(`/desk/positional/${groupId}`);
   revalidatePath(`/positional/${groupId}`);
 
@@ -94,6 +96,8 @@ export async function DELETE(_request: Request, context: Context) {
 
   await prisma.optionLeg.delete({ where: { id: legId } });
   await refreshPositionalGroupPnl(groupId);
+  revalidatePath("/desk");
+  revalidatePath("/positional");
   revalidatePath(`/desk/positional/${groupId}`);
   revalidatePath(`/positional/${groupId}`);
 

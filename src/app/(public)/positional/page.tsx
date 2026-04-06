@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { format } from "date-fns";
 import { TradeTimelineNav } from "@/components/navigation/TradeTimelineNav";
+import { LiveGroupPnl } from "@/components/LiveGroupPnl";
 import { formatInr, pnlColor, statusBadgeClass } from "@/lib/format";
 import { getPositionalOverview } from "@/lib/server/trade-service";
 import { monthKeyFromDate, weekKeyFromDate } from "@/lib/server/timeline";
@@ -74,7 +75,11 @@ export default async function PositionalPage({ searchParams }: Props) {
             )}
           </div>
           <div className={`text-right text-lg font-bold ${pnlColor(group.totalPnl)}`}>
-            {formatInr(group.totalPnl)}
+            <LiveGroupPnl
+              groupId={group.id}
+              status={group.status}
+              initialPnl={group.totalPnl}
+            />
           </div>
         </div>
       </Link>

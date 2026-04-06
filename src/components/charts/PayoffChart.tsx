@@ -29,10 +29,9 @@ function formatPnl(value: number): string {
   return `${sign}${abs}`;
 }
 
-function computeXTicks(data: PayoffPoint[]): number[] {
-  if (data.length < 2) return data.map(d => d.price);
-  const min = data[0].price;
-  const max = data[data.length - 1].price;
+function computeXTicks(min: number, max: number): number[] {
+  if (max <= min) return [min];
+
   const range = max - min;
   const raw = range / 7;
   const interval =
@@ -43,7 +42,37 @@ function computeXTicks(data: PayoffPoint[]): number[] {
   const first = Math.ceil(min / interval) * interval;
   const ticks: number[] = [];
   for (let t = first; t <= max; t += interval) ticks.push(t);
+  if (ticks.length === 0) {
+    ticks.push(min, max);
+  }
   return ticks;
+}
+
+function computeMaxProfitCenter(data: PayoffPoint[]) {
+  let maxProfit = Number.NEGATIVE_INFINITY;
+  const prices: number[] = [];
+
+  for (const point of data) {
+    const pointMax = Math.max(point.expiryPnl, point.targetPnl);
+    if (pointMax > maxProfit) {
+      maxProfit = pointMax;
+      prices.length = 0;
+      prices.push(point.price);
+      continue;
+    }
+
+    if (pointMax === maxProfit) {
+      prices.push(point.price);
+    }
+  }
+
+  if (prices.length === 0) {
+    return data[Math.floor(data.length / 2)]?.price ?? 0;
+  }
+
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  return (min + max) / 2;
 }
 
 export function PayoffChart({ data, currentPrice, breakevens }: Props) {
@@ -81,7 +110,13 @@ export function PayoffChart({ data, currentPrice, breakevens }: Props) {
   const pad = span === 0 ? 1 : span * 0.12;
   const yMin = minPnl - pad;
   const yMax = maxPnl + pad;
-  const xTicks = computeXTicks(data);
+  const dataMinX = data[0].price;
+  const dataMaxX = data[data.length - 1].price;
+  const centerPrice = computeMaxProfitCenter(data);
+  const dataRange = Math.max(1, dataMaxX - dataMinX);
+  const xMin = centerPrice - dataRange / 2;
+  const xMax = centerPrice + dataRange / 2;
+  const xTicks = computeXTicks(xMin, xMax);
 
   return (
     <div ref={containerRef} className="h-[320px] w-full min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
@@ -92,7 +127,7 @@ export function PayoffChart({ data, currentPrice, breakevens }: Props) {
             <XAxis
               dataKey="price"
               type="number"
-              domain={["dataMin", "dataMax"]}
+              domain={[xMin, xMax]}
               ticks={xTicks}
               tick={{ fill: "#334155", fontSize: 12 }}
             />
