@@ -8,6 +8,7 @@ const patchCommoditySchema = z.object({
   title: z.string().max(200).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   status: z.enum(["OPEN", "CLOSED"]).optional(),
+  bundleId: z.string().cuid().nullable().optional(),
 });
 
 export async function GET(
@@ -49,6 +50,10 @@ export async function PATCH(
       title: parsed.data.title,
       notes: parsed.data.notes,
       status: parsed.data.status,
+      bundleId:
+        parsed.data.bundleId === undefined
+          ? undefined
+          : parsed.data.bundleId,
     },
   });
 

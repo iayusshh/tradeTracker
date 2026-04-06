@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { getTotalNetPnl } from "@/lib/server/trade-service";
+import { formatInr, pnlColor } from "@/lib/format";
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+  const netPnl = await getTotalNetPnl();
+
   return (
     <>
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
@@ -25,6 +29,15 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               Commodities
             </Link>
           </nav>
+
+          <div className="text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+              Net P&amp;L
+            </p>
+            <p className={`text-sm font-bold ${pnlColor(netPnl)}`}>
+              {formatInr(netPnl)}
+            </p>
+          </div>
         </div>
       </header>
 

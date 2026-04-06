@@ -4,10 +4,13 @@ import { AddOptionExecutionForm } from "@/components/admin/AddOptionExecutionFor
 import { AddOptionLegForm } from "@/components/admin/AddOptionLegForm";
 import { EditableLegsList, type SerializedLeg } from "@/components/admin/EditableLegsList";
 import { ToggleStatusButton } from "@/components/admin/ToggleStatusButton";
+import { TagPicker } from "@/components/admin/TagPicker";
+import { BundlePicker } from "@/components/admin/BundlePicker";
 import { LivePositionalPnl } from "@/components/LivePositionalPnl";
 import { LivePnlSummary } from "@/components/LivePnlSummary";
+import { StatusDot } from "@/components/StatusDot";
 import { computePositionalGroupPnl } from "@/lib/math/pnl";
-import { getPositionalGroupById } from "@/lib/server/trade-service";
+import { getPositionalGroupById, getAllTags, getAllBundles } from "@/lib/server/trade-service";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +27,18 @@ function symbolStrikeStep(symbol: string): number {
 
 export default async function AdminPositionalDetailPage({ params }: Props) {
   const { groupId } = await params;
-  const group = await getPositionalGroupById(groupId);
+  const [group, allTags, allBundles] = await Promise.all([
+    getPositionalGroupById(groupId),
+    getAllTags(),
+    getAllBundles(),
+  ]);
 
   if (!group) {
     notFound();
   }
+
+  const groupTags = (group as { tags?: { id: string; name: string; color: string }[] }).tags ?? [];
+  const groupBundle = (group as { bundle?: { id: string; name: string } | null }).bundle ?? null;
 
   // Compute current price from latest execution's underlyingLtp
   const allExecutions = group.legs.flatMap(
@@ -81,10 +91,28 @@ export default async function AdminPositionalDetailPage({ params }: Props) {
       <section className="rounded-2xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{group.title}</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {group.underlyingSymbol} · {format(group.startedAt, "dd MMM yyyy")}
-            </p>
+            <div className="flex items-center gap-2">
+              <StatusDot status={group.status} />
+              <h2 className="text-2xl font-bold text-slate-900">{group.title}</h2>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <p className="text-sm text-slate-500">
+                {group.underlyingSymbol} · {format(group.startedAt, "dd MMM yyyy")}
+              </p>
+              <TagPicker
+                entityId={group.id}
+                entityType="positional"
+                currentTags={groupTags}
+                allTags={allTags}
+              />
+              <BundlePicker
+                entityId={group.id}
+                entityType="positional"
+                currentBundleId={groupBundle?.id ?? null}
+                currentBundleName={groupBundle?.name ?? null}
+                allBundles={allBundles}
+              />
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <LivePnlSummary

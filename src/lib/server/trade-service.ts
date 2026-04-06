@@ -9,12 +9,21 @@ import {
   weekLabelFromDate,
 } from "@/lib/server/timeline";
 
+export type TagItem = {
+  id: string;
+  name: string;
+  color: string;
+};
+
 export type OverviewItem = {
   id: string;
   title: string;
   startedAt: Date;
   status: "OPEN" | "CLOSED";
   totalPnl: number;
+  tags: TagItem[];
+  bundleId: string | null;
+  bundleName: string | null;
 };
 
 export type NavWeek = {
@@ -163,6 +172,10 @@ export async function refreshCommodityTradePnl(tradeId: string) {
 export async function getPositionalOverview() {
   const groups = await prisma.positionalTradeGroup.findMany({
     orderBy: { startedAt: "desc" },
+    include: {
+      tags: true,
+      bundle: { select: { id: true, name: true } },
+    },
   });
 
   const items: OverviewItem[] = groups.map((group: (typeof groups)[number]) => ({
@@ -171,6 +184,13 @@ export async function getPositionalOverview() {
     startedAt: group.startedAt,
     status: group.status,
     totalPnl: group.totalPnl,
+    tags: group.tags.map((t: { id: string; name: string; color: string }) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+    })),
+    bundleId: group.bundle?.id ?? null,
+    bundleName: group.bundle?.name ?? null,
   }));
 
   return {
@@ -182,6 +202,10 @@ export async function getPositionalOverview() {
 export async function getCommodityOverview() {
   const trades = await prisma.commodityTrade.findMany({
     orderBy: { startedAt: "desc" },
+    include: {
+      tags: true,
+      bundle: { select: { id: true, name: true } },
+    },
   });
 
   const items: OverviewItem[] = trades.map((trade: (typeof trades)[number]) => ({
@@ -190,12 +214,37 @@ export async function getCommodityOverview() {
     startedAt: trade.startedAt,
     status: trade.status,
     totalPnl: trade.totalPnl,
+    tags: trade.tags.map((t: { id: string; name: string; color: string }) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+    })),
+    bundleId: trade.bundle?.id ?? null,
+    bundleName: trade.bundle?.name ?? null,
   }));
 
   return {
     items,
     nav: buildMonthWeekBuckets(items),
   };
+}
+
+export async function getAllTags() {
+  return prisma.tag.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getAllBundles() {
+  return prisma.tradeBundle.findMany({ orderBy: { name: "asc" } });
+}
+
+export async function getTotalNetPnl(): Promise<number> {
+  const [positional, commodity] = await Promise.all([
+    prisma.positionalTradeGroup.aggregate({ _sum: { totalPnl: true } }),
+    prisma.commodityTrade.aggregate({ _sum: { totalPnl: true } }),
+  ]);
+  return toNumber(
+    (positional._sum.totalPnl ?? 0) + (commodity._sum.totalPnl ?? 0)
+  );
 }
 
 export async function getPositionalGroupById(groupId: string) {
@@ -210,6 +259,8 @@ export async function getPositionalGroupById(groupId: string) {
           },
         },
       },
+      tags: true,
+      bundle: { select: { id: true, name: true } },
     },
   });
 }
@@ -221,6 +272,8 @@ export async function getCommodityTradeById(tradeId: string) {
       executions: {
         orderBy: { executedAt: "asc" },
       },
+      tags: true,
+      bundle: { select: { id: true, name: true } },
     },
   });
 }

@@ -9,6 +9,7 @@ const patchGroupSchema = z.object({
   targetDate: z.string().datetime({ offset: true }).or(z.string().date()).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   status: z.enum(["OPEN", "CLOSED"]).optional(),
+  bundleId: z.string().cuid().nullable().optional(),
 });
 
 export async function GET(
@@ -60,6 +61,10 @@ export async function PATCH(
             ? new Date(parsed.data.targetDate)
             : null,
       status: parsed.data.status,
+      bundleId:
+        parsed.data.bundleId === undefined
+          ? undefined
+          : parsed.data.bundleId,
     },
   });
 

@@ -1,80 +1,51 @@
-import Link from "next/link";
-import { format } from "date-fns";
-import { LiveGroupPnl } from "@/components/LiveGroupPnl";
-import { formatInr, pnlColor } from "@/lib/format";
-import { getCommodityOverview, getPositionalOverview } from "@/lib/server/trade-service";
+import {
+  getCommodityOverview,
+  getPositionalOverview,
+  getAllTags,
+  getAllBundles,
+} from "@/lib/server/trade-service";
+import { DeskBoard, type TradeItem } from "@/components/admin/DeskBoard";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [positional, commodities] = await Promise.all([
+  const [positional, commodities, allTags, allBundles] = await Promise.all([
     getPositionalOverview(),
     getCommodityOverview(),
+    getAllTags(),
+    getAllBundles(),
   ]);
 
+  const posItems: TradeItem[] = positional.items.map((g) => ({
+    id: g.id,
+    kind: "positional" as const,
+    title: g.title,
+    startedAt: g.startedAt,
+    status: g.status,
+    totalPnl: g.totalPnl,
+    tags: g.tags,
+    bundleId: g.bundleId,
+    bundleName: g.bundleName,
+  }));
+
+  const comItems: TradeItem[] = commodities.items.map((t) => ({
+    id: t.id,
+    kind: "commodity" as const,
+    title: t.title,
+    startedAt: t.startedAt,
+    status: t.status,
+    totalPnl: t.totalPnl,
+    tags: t.tags,
+    bundleId: t.bundleId,
+    bundleName: t.bundleName,
+  }));
+
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Positional groups</h2>
-          <Link href="/desk/positional/new" className="text-sm font-semibold text-teal-700">
-            + Create
-          </Link>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {positional.items.length === 0 ? (
-            <p className="text-sm text-slate-500">No positional groups yet.</p>
-          ) : (
-            positional.items.map((group) => (
-              <Link
-                key={group.id}
-                href={`/desk/positional/${group.id}`}
-                className="block rounded-xl border border-slate-200 p-3 transition hover:bg-slate-50"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-900">{group.title}</p>
-                    <p className="text-xs text-slate-500">{format(group.startedAt, "dd MMM yyyy")}</p>
-                  </div>
-                  <LiveGroupPnl groupId={group.id} status={group.status} initialPnl={group.totalPnl} />
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Commodity trades</h2>
-          <Link href="/desk/commodities/new" className="text-sm font-semibold text-amber-700">
-            + Create
-          </Link>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {commodities.items.length === 0 ? (
-            <p className="text-sm text-slate-500">No commodity trades yet.</p>
-          ) : (
-            commodities.items.map((trade) => (
-              <Link
-                key={trade.id}
-                href={`/desk/commodities/${trade.id}`}
-                className="block rounded-xl border border-slate-200 p-3 transition hover:bg-slate-50"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-900">{trade.title}</p>
-                    <p className="text-xs text-slate-500">{format(trade.startedAt, "dd MMM yyyy")}</p>
-                  </div>
-                  <p className={`font-semibold ${pnlColor(trade.totalPnl)}`}>{formatInr(trade.totalPnl)}</p>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </section>
-    </div>
+    <DeskBoard
+      positional={posItems}
+      commodities={comItems}
+      allTags={allTags}
+      allBundles={allBundles}
+    />
   );
 }
