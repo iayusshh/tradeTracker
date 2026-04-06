@@ -130,11 +130,19 @@ export function buildPayoffSeries({
 
     for (const leg of legs) {
       const snapshot = computeOptionLegSnapshot(leg);
-      if (snapshot.openQuantity <= 0) {
+
+      // For closed legs fall back to total entered quantity so the chart
+      // still shows the original strategy payoff profile.
+      const entryQuantity = leg.executions
+        .filter((ex) => ex.kind !== "EXIT")
+        .reduce((sum, ex) => sum + Math.max(0, ex.quantity), 0);
+      const effectiveQty = snapshot.openQuantity > 0 ? snapshot.openQuantity : entryQuantity;
+
+      if (effectiveQty <= 0) {
         continue;
       }
 
-      const multiplier = snapshot.openQuantity * leg.lotSize;
+      const multiplier = effectiveQty * leg.lotSize;
       const intrinsic = intrinsicValue(leg.optionType, leg.strike, price);
 
       const legExpiryPnl =

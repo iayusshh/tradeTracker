@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { format } from "date-fns";
+import { LiveGroupPnl } from "@/components/LiveGroupPnl";
 import { formatInr, pnlColor } from "@/lib/format";
 import { getCommodityOverview, getPositionalOverview } from "@/lib/server/trade-service";
 
@@ -36,7 +37,7 @@ export default async function AdminDashboardPage() {
                     <p className="font-semibold text-slate-900">{group.title}</p>
                     <p className="text-xs text-slate-500">{format(group.startedAt, "dd MMM yyyy")}</p>
                   </div>
-                  <p className={`font-semibold ${pnlColor(group.totalPnl)}`}>{formatInr(group.totalPnl)}</p>
+                  <LiveGroupPnl groupId={group.id} status={group.status} initialPnl={group.totalPnl} />
                 </div>
               </Link>
             ))

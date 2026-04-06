@@ -7,9 +7,9 @@ import { refreshPositionalGroupPnl } from "@/lib/server/trade-service";
 const addExecutionSchema = z.object({
   legId: z.string().min(1),
   kind: z.enum(["ENTRY", "EXIT", "ADJUSTMENT"]),
-  optionPrice: z.number().positive(),
+  optionPrice: z.number().min(0),
   quantity: z.number().int().positive(),
-  underlyingLtp: z.number().positive(),
+  underlyingLtp: z.number().min(0),
   executedAt: z.coerce.date(),
   fees: z.number().min(0).optional(),
   notes: z.string().max(2000).nullable().optional(),
@@ -27,13 +27,8 @@ export async function POST(
   }
 
   const leg = await prisma.optionLeg.findFirst({
-    where: {
-      id: parsed.data.legId,
-      groupId,
-    },
-    include: {
-      executions: true,
-    },
+    where: { id: parsed.data.legId, groupId },
+    include: { executions: true },
   });
 
   if (!leg) {
@@ -41,11 +36,11 @@ export async function POST(
   }
 
   const entered = leg.executions
-    .filter((execution: (typeof leg.executions)[number]) => execution.kind !== "EXIT")
-    .reduce((sum: number, execution: (typeof leg.executions)[number]) => sum + execution.quantity, 0);
+    .filter((e) => e.kind !== "EXIT")
+    .reduce((sum, e) => sum + e.quantity, 0);
   const exited = leg.executions
-    .filter((execution: (typeof leg.executions)[number]) => execution.kind === "EXIT")
-    .reduce((sum: number, execution: (typeof leg.executions)[number]) => sum + execution.quantity, 0);
+    .filter((e) => e.kind === "EXIT")
+    .reduce((sum, e) => sum + e.quantity, 0);
   const openQuantity = entered - exited;
 
   if (parsed.data.kind === "EXIT" && parsed.data.quantity > openQuantity) {

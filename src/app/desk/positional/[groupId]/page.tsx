@@ -5,7 +5,8 @@ import { AddOptionLegForm } from "@/components/admin/AddOptionLegForm";
 import { EditableLegsList, type SerializedLeg } from "@/components/admin/EditableLegsList";
 import { ToggleStatusButton } from "@/components/admin/ToggleStatusButton";
 import { LivePositionalPnl } from "@/components/LivePositionalPnl";
-import { formatInr, pnlColor } from "@/lib/format";
+import { LivePnlSummary } from "@/components/LivePnlSummary";
+import { computePositionalGroupPnl } from "@/lib/math/pnl";
 import { getPositionalGroupById } from "@/lib/server/trade-service";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +34,13 @@ export default async function AdminPositionalDetailPage({ params }: Props) {
   const allExecutions = group.legs.flatMap(
     (leg: (typeof group.legs)[number]) => leg.executions
   );
-  const latestExecution = [...allExecutions].sort(
-    (a, b) => new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime()
-  )[0];
-  const currentPrice = Number(latestExecution?.underlyingLtp ?? group.legs[0]?.strike ?? 22000);
+  // Skip executions with underlyingLtp = 0 (exits logged without underlying price)
+  const latestWithPrice = [...allExecutions]
+    .filter((ex) => Number(ex.underlyingLtp) > 0)
+    .sort((a, b) => new Date(b.executedAt).getTime() - new Date(a.executedAt).getTime())[0];
+  const currentPrice = Number(
+    latestWithPrice?.underlyingLtp ?? group.legs[0]?.strike ?? 22000
+  );
 
   // Serialize legs for client components (plain objects, dates as ISO strings)
   const serializedLegs: SerializedLeg[] = group.legs.map(
@@ -68,6 +72,9 @@ export default async function AdminPositionalDetailPage({ params }: Props) {
 
   const strikeStep = symbolStrikeStep(group.underlyingSymbol);
 
+  // Compute PnL fresh from execution data — don't rely on potentially stale DB cache
+  const computedPnl = computePositionalGroupPnl(serializedLegs);
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -80,13 +87,12 @@ export default async function AdminPositionalDetailPage({ params }: Props) {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Total PnL</p>
-              <p className={`text-xl font-bold ${pnlColor(group.totalPnl)}`}>{formatInr(group.totalPnl)}</p>
-              <p className="text-[11px] text-slate-400">
-                R: {formatInr(group.realizedPnl)} · U: {formatInr(group.unrealizedPnl)}
-              </p>
-            </div>
+            <LivePnlSummary
+              groupId={group.id}
+              legs={serializedLegs}
+              status={group.status}
+              initialPnl={computedPnl}
+            />
             <ToggleStatusButton
               id={group.id}
               currentStatus={group.status}
