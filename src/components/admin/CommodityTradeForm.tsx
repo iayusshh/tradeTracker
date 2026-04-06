@@ -6,10 +6,37 @@ import { useRouter } from "next/navigation";
 type FormState = {
   title: string;
   symbol: string;
+  exchange: string;
   direction: "LONG" | "SHORT";
+  instrumentType: "FUTURES" | "OPTIONS";
+  lotSize: string;
+  expiry: string;
+  strike: string;
+  optionType: "" | "CALL" | "PUT";
   startedAt: string;
   notes: string;
 };
+
+async function readJsonSafely<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+function toErrorMessage(payload: unknown, fallback: string) {
+  if (payload && typeof payload === "object") {
+    const value = (payload as { error?: unknown }).error;
+    if (typeof value === "string") {
+      return value;
+    }
+  }
+  return fallback;
+}
 
 export function CommodityTradeForm() {
   const router = useRouter();
@@ -18,15 +45,29 @@ export function CommodityTradeForm() {
   const [state, setState] = useState<FormState>({
     title: "",
     symbol: "CRUDEOIL",
+    exchange: "MCX",
     direction: "LONG",
+    instrumentType: "FUTURES",
+    lotSize: "1",
+    expiry: "",
+    strike: "",
+    optionType: "",
     startedAt: new Date().toISOString().slice(0, 10),
     notes: "",
   });
+
+  const isOptions = state.instrumentType === "OPTIONS";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
+
+    if (isOptions && (!state.expiry || !state.strike || !state.optionType)) {
+      setError("For options trades, expiry, strike and option type are required.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/admin/commodities", {
@@ -35,16 +76,22 @@ export function CommodityTradeForm() {
         body: JSON.stringify({
           title: state.title || null,
           symbol: state.symbol,
+          exchange: state.exchange,
           direction: state.direction,
+          instrumentType: state.instrumentType,
+          lotSize: Number(state.lotSize),
+          expiry: isOptions ? state.expiry || null : null,
+          strike: isOptions ? Number(state.strike) : null,
+          optionType: isOptions ? state.optionType || null : null,
           startedAt: state.startedAt,
           notes: state.notes || null,
         }),
       });
 
-      const payload = (await response.json()) as { id?: string; error?: string };
+      const payload = await readJsonSafely<{ id?: string; error?: string }>(response);
 
-      if (!response.ok || !payload.id) {
-        setError(payload.error || "Could not create commodity trade.");
+      if (!response.ok || !payload?.id) {
+        setError(toErrorMessage(payload, `Could not create commodity trade (HTTP ${response.status}).`));
         return;
       }
 
@@ -86,6 +133,20 @@ export function CommodityTradeForm() {
             onChange={(event) => setState((prev) => ({ ...prev, symbol: event.target.value.toUpperCase() }))}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
           />
+          <p className="mt-1 text-xs text-slate-500">Use tradable symbol, e.g. MCX contract code.</p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-slate-700" htmlFor="exchange">
+            Exchange
+          </label>
+          <input
+            id="exchange"
+            required
+            value={state.exchange}
+            onChange={(event) => setState((prev) => ({ ...prev, exchange: event.target.value.toUpperCase() }))}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          />
         </div>
 
         <div>
@@ -104,6 +165,46 @@ export function CommodityTradeForm() {
             <option value="SHORT">Short</option>
           </select>
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label className="text-sm font-medium text-slate-700" htmlFor="instrumentType">
+            Instrument type
+          </label>
+          <select
+            id="instrumentType"
+            value={state.instrumentType}
+            onChange={(event) =>
+              setState((prev) => ({
+                ...prev,
+                instrumentType: event.target.value as "FUTURES" | "OPTIONS",
+                expiry: event.target.value === "OPTIONS" ? prev.expiry : "",
+                strike: event.target.value === "OPTIONS" ? prev.strike : "",
+                optionType: event.target.value === "OPTIONS" ? prev.optionType : "",
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          >
+            <option value="FUTURES">Futures</option>
+            <option value="OPTIONS">Options</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-slate-700" htmlFor="lotSize">
+            Lot size
+          </label>
+          <input
+            id="lotSize"
+            type="number"
+            min="1"
+            required
+            value={state.lotSize}
+            onChange={(event) => setState((prev) => ({ ...prev, lotSize: event.target.value }))}
+            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+          />
+        </div>
 
         <div>
           <label className="text-sm font-medium text-slate-700" htmlFor="startedAt">
@@ -119,6 +220,59 @@ export function CommodityTradeForm() {
           />
         </div>
       </div>
+
+      {isOptions ? (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label className="text-sm font-medium text-slate-700" htmlFor="expiry">
+              Expiry
+            </label>
+            <input
+              id="expiry"
+              type="date"
+              required={isOptions}
+              value={state.expiry}
+              onChange={(event) => setState((prev) => ({ ...prev, expiry: event.target.value }))}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700" htmlFor="strike">
+              Strike
+            </label>
+            <input
+              id="strike"
+              type="number"
+              step="0.01"
+              min="0"
+              required={isOptions}
+              value={state.strike}
+              onChange={(event) => setState((prev) => ({ ...prev, strike: event.target.value }))}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700" htmlFor="optionType">
+              Option type
+            </label>
+            <select
+              id="optionType"
+              required={isOptions}
+              value={state.optionType}
+              onChange={(event) =>
+                setState((prev) => ({ ...prev, optionType: event.target.value as "" | "CALL" | "PUT" }))
+              }
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+            >
+              <option value="">Select</option>
+              <option value="CALL">Call</option>
+              <option value="PUT">Put</option>
+            </select>
+          </div>
+        </div>
+      ) : null}
 
       <div>
         <label className="text-sm font-medium text-slate-700" htmlFor="notes">

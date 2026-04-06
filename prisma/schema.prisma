@@ -33,6 +33,11 @@ enum CommodityDirection {
   SHORT
 }
 
+enum InstrumentType {
+  FUTURES
+  OPTIONS
+}
+
 model Tag {
   id               String                 @id @default(cuid())
   name             String                 @unique
@@ -110,22 +115,28 @@ model OptionExecution {
 }
 
 model CommodityTrade {
-  id            String             @id @default(cuid())
-  title         String?
-  symbol        String
-  direction     CommodityDirection
-  startedAt     DateTime
-  status        TradeStatus        @default(OPEN)
-  notes         String?
-  realizedPnl   Float              @default(0)
-  unrealizedPnl Float              @default(0)
-  totalPnl      Float              @default(0)
-  executions    CommodityExecution[]
-  tags          Tag[]
-  bundle        TradeBundle?       @relation(fields: [bundleId], references: [id])
-  bundleId      String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id             String             @id @default(cuid())
+  title          String?
+  symbol         String
+  exchange       String             @default("MCX")
+  direction      CommodityDirection
+  instrumentType InstrumentType     @default(FUTURES)
+  lotSize        Int                @default(1)
+  expiry         DateTime?
+  strike         Float?
+  optionType     OptionType?
+  startedAt      DateTime
+  status         TradeStatus        @default(OPEN)
+  notes          String?
+  realizedPnl    Float              @default(0)
+  unrealizedPnl  Float              @default(0)
+  totalPnl       Float              @default(0)
+  executions     CommodityExecution[]
+  tags           Tag[]
+  bundle         TradeBundle?       @relation(fields: [bundleId], references: [id])
+  bundleId       String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([startedAt])
   @@index([status])

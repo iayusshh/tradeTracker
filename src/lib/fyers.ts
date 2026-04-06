@@ -3,6 +3,7 @@ import "server-only";
 import { format } from "date-fns";
 
 const FYERS_OPTION_CHAIN_URL = "https://api-t1.fyers.in/data/options-chain-v3";
+const FYERS_QUOTES_URL = "https://api-t1.fyers.in/data/quotes";
 
 /**
  * Maps underlyingSymbol (as stored in DB) to Fyers option chain symbols.
@@ -19,6 +20,88 @@ const UNDERLYING_SYMBOL: Record<string, string> = {
 
 function authHeader() {
   return `${process.env.FYERS_APP_ID ?? ""}:${process.env.FYERS_ACCESS_TOKEN ?? ""}`;
+}
+
+function parsePositiveNumber(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+function buildFyersQuoteCandidates(symbol: string, exchange = "MCX"): string[] {
+  const normalizedSymbol = symbol.trim().toUpperCase();
+  const normalizedExchange = exchange.trim().toUpperCase();
+
+  if (!normalizedSymbol) return [];
+  if (normalizedSymbol.includes(":")) return [normalizedSymbol];
+
+  const candidates = [
+    `${normalizedExchange}:${normalizedSymbol}`,
+    normalizedSymbol,
+  ];
+
+  return [...new Set(candidates)];
+}
+
+export type FyersLtpQuote = {
+  requestedSymbol: string;
+  resolvedSymbol: string;
+  ltp: number;
+};
+
+/**
+ * Fetches LTP for one symbol using Fyers quotes endpoint.
+ * Supports both prefixed symbols (NSE:SBIN-EQ) and raw symbols by trying
+ * multiple candidates.
+ */
+export async function fetchSingleSymbolLtp(
+  symbol: string,
+  exchange = "MCX"
+): Promise<FyersLtpQuote | null> {
+  const candidates = buildFyersQuoteCandidates(symbol, exchange);
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const url = `${FYERS_QUOTES_URL}?symbols=${encodeURIComponent(candidates.join(","))}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: authHeader(),
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Fyers quotes API error ${res.status}: ${body}`);
+  }
+
+  const json = await res.json();
+  if (json?.s !== "ok") {
+    throw new Error(`Fyers quotes API returned status "${json?.s}": ${json?.message ?? ""}`);
+  }
+
+  const rows = Array.isArray(json?.d) ? json.d : [];
+  for (const row of rows) {
+    const resolvedSymbol =
+      (typeof row?.n === "string" && row.n) ||
+      (typeof row?.symbol === "string" && row.symbol) ||
+      "";
+    const ltp = parsePositiveNumber(row?.v?.lp ?? row?.v?.ltp ?? row?.v?.last_price);
+    if (!ltp) {
+      continue;
+    }
+
+    return {
+      requestedSymbol: symbol,
+      resolvedSymbol,
+      ltp,
+    };
+  }
+
+  return null;
 }
 
 export type OptionChainEntry = {

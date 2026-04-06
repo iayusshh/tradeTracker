@@ -77,3 +77,30 @@ export async function PATCH(
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ groupId: string }> }
+) {
+  const { groupId } = await context.params;
+
+  const existing = await prisma.positionalTradeGroup.findUnique({
+    where: { id: groupId },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "Group not found" }, { status: 404 });
+  }
+
+  await prisma.positionalTradeGroup.delete({
+    where: { id: groupId },
+  });
+
+  revalidatePath("/desk");
+  revalidatePath(`/desk/positional/${groupId}`);
+  revalidatePath("/positional");
+  revalidatePath(`/positional/${groupId}`);
+
+  return NextResponse.json({ ok: true });
+}

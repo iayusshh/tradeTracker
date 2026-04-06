@@ -42,6 +42,17 @@ type Props = {
   allBundles: BundleItem[];
 };
 
+async function readJsonSafely<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 // Droppable bundle bucket
 function BundleBucket({
   id,
@@ -155,10 +166,18 @@ function DraggableCard({
   trade,
   allTags,
   isDragging,
+  onDeleteTrade,
+  onEditTitle,
+  deletingTradeId,
+  editingTitleId,
 }: {
   trade: TradeItem;
   allTags: TagItem[];
   isDragging: boolean;
+  onDeleteTrade: (trade: TradeItem) => void;
+  onEditTitle: (trade: TradeItem) => void;
+  deletingTradeId: string | null;
+  editingTitleId: string | null;
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: trade.id,
@@ -176,7 +195,16 @@ function DraggableCard({
         isDragging ? "opacity-40 shadow-lg" : "border-slate-200 hover:bg-slate-50"
       }`}
     >
-      <TradeCard trade={trade} allTags={allTags} dragListeners={listeners} dragAttributes={attributes} />
+      <TradeCard
+        trade={trade}
+        allTags={allTags}
+        dragListeners={listeners}
+        dragAttributes={attributes}
+        onDeleteTrade={onDeleteTrade}
+        onEditTitle={onEditTitle}
+        deletingTradeId={deletingTradeId}
+        editingTitleId={editingTitleId}
+      />
     </div>
   );
 }
@@ -187,12 +215,20 @@ function TradeCard({
   allTags,
   dragListeners,
   dragAttributes,
+  onDeleteTrade,
+  onEditTitle,
+  deletingTradeId,
+  editingTitleId,
   overlay = false,
 }: {
   trade: TradeItem;
   allTags: TagItem[];
   dragListeners?: ReturnType<typeof useDraggable>["listeners"];
   dragAttributes?: ReturnType<typeof useDraggable>["attributes"];
+  onDeleteTrade?: (trade: TradeItem) => void;
+  onEditTitle?: (trade: TradeItem) => void;
+  deletingTradeId?: string | null;
+  editingTitleId?: string | null;
   overlay?: boolean;
 }) {
   const href =
@@ -255,12 +291,38 @@ function TradeCard({
               </span>
             )}
             {!overlay && (
-              <TagPicker
-                entityId={trade.id}
-                entityType={trade.kind}
-                currentTags={trade.tags}
-                allTags={allTags}
-              />
+              <div className="flex items-center gap-1.5">
+                <TagPicker
+                  entityId={trade.id}
+                  entityType={trade.kind}
+                  currentTags={trade.tags}
+                  allTags={allTags}
+                />
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onEditTitle?.(trade);
+                  }}
+                  disabled={editingTitleId === trade.id || deletingTradeId === trade.id}
+                  className="rounded-md border border-slate-300 px-2 py-0.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {editingTitleId === trade.id ? "Saving..." : "Rename"}
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onDeleteTrade?.(trade);
+                  }}
+                  disabled={deletingTradeId === trade.id}
+                  className="rounded-md border border-rose-200 px-2 py-0.5 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {deletingTradeId === trade.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -281,6 +343,10 @@ function TradeColumn({
   activeId,
   onCreateBundle,
   onDeleteBundle,
+  onDeleteTrade,
+  onEditTitle,
+  deletingTradeId,
+  editingTitleId,
 }: {
   title: string;
   createHref: string;
@@ -292,26 +358,31 @@ function TradeColumn({
   activeId: string | null;
   onCreateBundle: (name: string) => Promise<void>;
   onDeleteBundle: (bundleId: string) => Promise<void>;
+  onDeleteTrade: (trade: TradeItem) => void;
+  onEditTitle: (trade: TradeItem) => void;
+  deletingTradeId: string | null;
+  editingTitleId: string | null;
 }) {
   const [newBundleName, setNewBundleName] = useState("");
   const [showBundleInput, setShowBundleInput] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  // Group items by bundle
-  const bundleMap = new Map<string, { bundle: BundleItem; items: TradeItem[] }>();
+  // Group items by bundle, including empty bundles so new buckets are immediately usable.
+  const bundleMap = new Map<string, { bundle: BundleItem; items: TradeItem[] }>(
+    allBundles.map((bundle) => [bundle.id, { bundle, items: [] }])
+  );
   const ungrouped: TradeItem[] = [];
 
   for (const item of items) {
     if (item.bundleId && item.bundleName) {
-      const existing = bundleMap.get(item.bundleId);
-      if (existing) {
-        existing.items.push(item);
-      } else {
+      if (!bundleMap.has(item.bundleId)) {
         bundleMap.set(item.bundleId, {
           bundle: { id: item.bundleId, name: item.bundleName },
-          items: [item],
+          items: [],
         });
       }
+      bundleMap.get(item.bundleId)!.items.push(item);
     } else {
       ungrouped.push(item);
     }
@@ -326,11 +397,19 @@ function TradeColumn({
   async function handleCreate() {
     const name = newBundleName.trim();
     if (!name) return;
+
+    setCreateError(null);
     setCreating(true);
-    await onCreateBundle(name);
-    setNewBundleName("");
-    setShowBundleInput(false);
-    setCreating(false);
+    try {
+      await onCreateBundle(name);
+      setNewBundleName("");
+      setShowBundleInput(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not create bundle.";
+      setCreateError(message);
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -389,6 +468,12 @@ function TradeColumn({
         </div>
       )}
 
+      {createError ? (
+        <p className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          {createError}
+        </p>
+      ) : null}
+
       <div className="mt-4 space-y-4">
         {items.length === 0 && allBundles.length === 0 ? (
           <p className="text-sm text-slate-500">No trades yet.</p>
@@ -410,6 +495,10 @@ function TradeColumn({
                     trade={item}
                     allTags={allTags}
                     isDragging={activeId === item.id}
+                    onDeleteTrade={onDeleteTrade}
+                    onEditTitle={onEditTitle}
+                    deletingTradeId={deletingTradeId}
+                    editingTitleId={editingTitleId}
                   />
                 ))}
               </BundleBucket>
@@ -426,6 +515,10 @@ function TradeColumn({
                   trade={item}
                   allTags={allTags}
                   isDragging={activeId === item.id}
+                  onDeleteTrade={onDeleteTrade}
+                  onEditTitle={onEditTitle}
+                  deletingTradeId={deletingTradeId}
+                  editingTitleId={editingTitleId}
                 />
               ))}
             </UngroupedBucket>
@@ -442,6 +535,9 @@ export function DeskBoard({ positional, commodities, allTags, allBundles }: Prop
   const [bundles, setBundles] = useState<BundleItem[]>(allBundles);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [deletingTradeId, setDeletingTradeId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -516,18 +612,37 @@ export function DeskBoard({ positional, commodities, allTags, allBundles }: Prop
   }
 
   const createBundle = useCallback(async (name: string) => {
+    setActionError(null);
+
     const res = await fetch("/api/admin/trade-bundles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
-    const bundle: BundleItem = await res.json();
+
+    const payload = await readJsonSafely<{ id?: string; name?: string; error?: string }>(res);
+    if (!res.ok || !payload?.id || !payload?.name) {
+      const message =
+        typeof payload?.error === "string"
+          ? payload.error
+          : `Could not create bundle (HTTP ${res.status}).`;
+      setActionError(message);
+      throw new Error(message);
+    }
+
+    const bundle: BundleItem = { id: payload.id, name: payload.name };
     setBundles((prev) =>
       prev.find((b) => b.id === bundle.id) ? prev : [...prev, bundle]
     );
   }, []);
 
   const deleteBundle = useCallback(async (bundleId: string) => {
+    setActionError(null);
+
+    const prevPosItems = posItems;
+    const prevComItems = comItems;
+    const prevBundles = bundles;
+
     // Optimistically ungroup any trades assigned to this bundle
     const ungroup = (items: TradeItem[]) =>
       items.map((i) => i.bundleId === bundleId ? { ...i, bundleId: null, bundleName: null } : i);
@@ -535,7 +650,113 @@ export function DeskBoard({ positional, commodities, allTags, allBundles }: Prop
     setComItems(ungroup);
     setBundles((prev) => prev.filter((b) => b.id !== bundleId));
 
-    await fetch(`/api/admin/trade-bundles/${bundleId}`, { method: "DELETE" });
+    try {
+      const response = await fetch(`/api/admin/trade-bundles/${bundleId}`, { method: "DELETE" });
+      if (!response.ok) {
+        const payload = await readJsonSafely<{ error?: string }>(response);
+        throw new Error(
+          typeof payload?.error === "string"
+            ? payload.error
+            : `Could not delete bundle (HTTP ${response.status}).`
+        );
+      }
+    } catch (err) {
+      setPosItems(prevPosItems);
+      setComItems(prevComItems);
+      setBundles(prevBundles);
+      setActionError(err instanceof Error ? err.message : "Could not delete bundle.");
+    }
+  }, [bundles, comItems, posItems]);
+
+  const editTradeTitle = useCallback(async (trade: TradeItem) => {
+    const input = window.prompt("Edit trade title", trade.title);
+    if (input === null) return;
+
+    const title = input.trim();
+    if (trade.kind === "positional" && title.length < 3) {
+      setActionError("Positional title must be at least 3 characters.");
+      return;
+    }
+    if (trade.kind === "commodity" && title.length < 1) {
+      setActionError("Commodity title cannot be empty.");
+      return;
+    }
+
+    setActionError(null);
+    setEditingTitleId(trade.id);
+
+    const endpoint =
+      trade.kind === "positional"
+        ? `/api/admin/positional/${trade.id}`
+        : `/api/admin/commodities/${trade.id}`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+
+      const payload = await readJsonSafely<{ error?: string }>(response);
+      if (!response.ok) {
+        setActionError(
+          typeof payload?.error === "string"
+            ? payload.error
+            : `Could not update title (HTTP ${response.status}).`
+        );
+        return;
+      }
+
+      if (trade.kind === "positional") {
+        setPosItems((prev) => prev.map((item) => (item.id === trade.id ? { ...item, title } : item)));
+      } else {
+        setComItems((prev) => prev.map((item) => (item.id === trade.id ? { ...item, title } : item)));
+      }
+    } catch {
+      setActionError("Unexpected network issue while updating title. Please retry.");
+    } finally {
+      setEditingTitleId(null);
+    }
+  }, []);
+
+  const deleteTrade = useCallback(async (trade: TradeItem) => {
+    const tradeLabel = trade.kind === "positional" ? "positional group" : "commodity trade";
+    const confirmMessage = `Delete ${tradeLabel} \"${trade.title}\"? This action cannot be undone.`;
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setActionError(null);
+    setDeletingTradeId(trade.id);
+
+    const endpoint =
+      trade.kind === "positional"
+        ? `/api/admin/positional/${trade.id}`
+        : `/api/admin/commodities/${trade.id}`;
+
+    try {
+      const response = await fetch(endpoint, { method: "DELETE" });
+      const payload = await readJsonSafely<{ error?: string }>(response);
+
+      if (!response.ok) {
+        setActionError(
+          typeof payload?.error === "string"
+            ? payload.error
+            : `Could not delete ${tradeLabel}.`
+        );
+        return;
+      }
+
+      if (trade.kind === "positional") {
+        setPosItems((prev) => prev.filter((item) => item.id !== trade.id));
+      } else {
+        setComItems((prev) => prev.filter((item) => item.id !== trade.id));
+      }
+    } catch {
+      setActionError("Unexpected network issue while deleting trade. Please retry.");
+    } finally {
+      setDeletingTradeId(null);
+    }
   }, []);
 
   return (
@@ -545,31 +766,47 @@ export function DeskBoard({ positional, commodities, allTags, allBundles }: Prop
       onDragOver={handleDragOver as never}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid gap-6 lg:grid-cols-2">
-        <TradeColumn
-          title="Positional groups"
-          createHref="/desk/positional/new"
-          createLabel="+ Create"
-          items={posItems}
-          allTags={allTags}
-          allBundles={bundles}
-          overId={overId}
-          activeId={activeId}
-          onCreateBundle={createBundle}
-          onDeleteBundle={deleteBundle}
-        />
-        <TradeColumn
-          title="Commodity trades"
-          createHref="/desk/commodities/new"
-          createLabel="+ Create"
-          items={comItems}
-          allTags={allTags}
-          allBundles={bundles}
-          overId={overId}
-          activeId={activeId}
-          onCreateBundle={createBundle}
-          onDeleteBundle={deleteBundle}
-        />
+      <div className="space-y-3">
+        {actionError ? (
+          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {actionError}
+          </p>
+        ) : null}
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <TradeColumn
+            title="Positional groups"
+            createHref="/desk/positional/new"
+            createLabel="+ Create"
+            items={posItems}
+            allTags={allTags}
+            allBundles={bundles}
+            overId={overId}
+            activeId={activeId}
+            onCreateBundle={createBundle}
+            onDeleteBundle={deleteBundle}
+            onDeleteTrade={deleteTrade}
+            onEditTitle={editTradeTitle}
+            deletingTradeId={deletingTradeId}
+            editingTitleId={editingTitleId}
+          />
+          <TradeColumn
+            title="Commodity trades"
+            createHref="/desk/commodities/new"
+            createLabel="+ Create"
+            items={comItems}
+            allTags={allTags}
+            allBundles={bundles}
+            overId={overId}
+            activeId={activeId}
+            onCreateBundle={createBundle}
+            onDeleteBundle={deleteBundle}
+            onDeleteTrade={deleteTrade}
+            onEditTitle={editTradeTitle}
+            deletingTradeId={deletingTradeId}
+            editingTitleId={editingTitleId}
+          />
+        </div>
       </div>
 
       <DragOverlay>

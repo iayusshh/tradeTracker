@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { AddCommodityExecutionForm } from "@/components/admin/AddCommodityExecutionForm";
+import { CommodityTradeSettingsForm } from "@/components/admin/CommodityTradeSettingsForm";
+import { EditableCommodityExecutionsTable } from "@/components/admin/EditableCommodityExecutionsTable";
 import { ToggleStatusButton } from "@/components/admin/ToggleStatusButton";
 import { TagPicker } from "@/components/admin/TagPicker";
 import { BundlePicker } from "@/components/admin/BundlePicker";
+import { LiveCommodityPnl } from "@/components/LiveCommodityPnl";
 import { StatusDot } from "@/components/StatusDot";
 import { formatInr, pnlColor } from "@/lib/format";
 import { getCommodityTradeById, getAllTags, getAllBundles } from "@/lib/server/trade-service";
@@ -28,6 +31,15 @@ export default async function AdminCommodityDetailPage({ params }: Props) {
 
   const tradeTags = (trade as { tags?: { id: string; name: string; color: string }[] }).tags ?? [];
   const tradeBundle = (trade as { bundle?: { id: string; name: string } | null }).bundle ?? null;
+  const serializedExecutions = trade.executions.map((execution: (typeof trade.executions)[number]) => ({
+    id: execution.id,
+    kind: execution.kind as "ENTRY" | "EXIT" | "ADJUSTMENT",
+    executedAt: new Date(execution.executedAt).toISOString(),
+    price: Number(execution.price),
+    quantity: Number(execution.quantity),
+    underlyingLtp: Number(execution.underlyingLtp),
+    fees: Number(execution.fees),
+  }));
 
   return (
     <div className="space-y-6">
@@ -40,8 +52,14 @@ export default async function AdminCommodityDetailPage({ params }: Props) {
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <p className="text-sm text-slate-600">
-                {trade.symbol} · {trade.direction} · {format(trade.startedAt, "dd MMM yyyy")}
+                {trade.symbol} · {trade.exchange} · {trade.direction} · {trade.instrumentType} · {trade.lotSize} lot size · {format(trade.startedAt, "dd MMM yyyy")}
               </p>
+              {trade.instrumentType === "OPTIONS" && trade.optionType && trade.strike !== null ? (
+                <p className="text-xs text-slate-500">
+                  {trade.optionType} {Number(trade.strike).toFixed(2)}
+                  {trade.expiry ? ` · Exp ${format(trade.expiry, "dd MMM yyyy")}` : ""}
+                </p>
+              ) : null}
               <TagPicker
                 entityId={trade.id}
                 entityType="commodity"
@@ -75,38 +93,40 @@ export default async function AdminCommodityDetailPage({ params }: Props) {
         </div>
       </section>
 
-      <AddCommodityExecutionForm tradeId={trade.id} />
+      <LiveCommodityPnl
+        tradeId={trade.id}
+        status={trade.status}
+        direction={trade.direction as "LONG" | "SHORT"}
+        lotSize={trade.lotSize}
+        executions={serializedExecutions}
+      />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h3 className="text-lg font-semibold text-slate-900">Execution ledger</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <CommodityTradeSettingsForm
+          trade={{
+            id: trade.id,
+            title: trade.title,
+            symbol: trade.symbol,
+            exchange: trade.exchange,
+            direction: trade.direction as "LONG" | "SHORT",
+            instrumentType: trade.instrumentType as "FUTURES" | "OPTIONS",
+            lotSize: trade.lotSize,
+            expiry: trade.expiry ? new Date(trade.expiry).toISOString() : null,
+            strike: trade.strike !== null ? Number(trade.strike) : null,
+            optionType: trade.optionType as "CALL" | "PUT" | null,
+            notes: trade.notes,
+          }}
+        />
+        <AddCommodityExecutionForm tradeId={trade.id} lotSize={trade.lotSize} />
+      </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-slate-500">
-                <th className="px-2 py-2">Type</th>
-                <th className="px-2 py-2">Time</th>
-                <th className="px-2 py-2">Price</th>
-                <th className="px-2 py-2">Qty</th>
-                <th className="px-2 py-2">Underlying LTP</th>
-                <th className="px-2 py-2">Fees</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trade.executions.map((execution: (typeof trade.executions)[number]) => (
-                <tr key={execution.id} className="border-b border-slate-100">
-                  <td className="px-2 py-2">{execution.kind}</td>
-                  <td className="px-2 py-2">{format(execution.executedAt, "dd MMM yyyy HH:mm")}</td>
-                  <td className="px-2 py-2">{execution.price.toFixed(2)}</td>
-                  <td className="px-2 py-2">{execution.quantity}</td>
-                  <td className="px-2 py-2">{execution.underlyingLtp.toFixed(2)}</td>
-                  <td className="px-2 py-2">{execution.fees.toFixed(2)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <EditableCommodityExecutionsTable
+        tradeId={trade.id}
+        lotSize={trade.lotSize}
+        instrumentType={trade.instrumentType as "FUTURES" | "OPTIONS"}
+        currentStrike={trade.strike !== null ? Number(trade.strike) : null}
+        executions={serializedExecutions}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 type Props = {
   tradeId: string;
+  lotSize: number;
 };
 
 type FormState = {
@@ -28,10 +29,32 @@ function toIsoDateTime(value: string): string {
   return parsed.toISOString();
 }
 
-export function AddCommodityExecutionForm({ tradeId }: Props) {
+async function readJsonSafely<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+function toErrorMessage(payload: unknown, fallback: string) {
+  if (payload && typeof payload === "object") {
+    const value = (payload as { error?: unknown }).error;
+    if (typeof value === "string") {
+      return value;
+    }
+  }
+  return fallback;
+}
+
+export function AddCommodityExecutionForm({ tradeId, lotSize }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFetchingLive, setIsFetchingLive] = useState(false);
   const [state, setState] = useState<FormState>({
     kind: "ENTRY",
     price: "",
@@ -41,6 +64,46 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
     fees: "0",
     notes: "",
   });
+
+  async function fetchLivePrice() {
+    setError(null);
+    setIsFetchingLive(true);
+
+    try {
+      const response = await fetch(`/api/quotes/commodities/${tradeId}`, {
+        cache: "no-store",
+      });
+
+      const payload = (await readJsonSafely<{
+        markPrice?: number | null;
+        underlyingLtp?: number | null;
+        error?: string;
+      }>(response)) ?? {};
+
+      if (!response.ok) {
+        setError(toErrorMessage(payload, `Could not fetch live quote (HTTP ${response.status}).`));
+        return;
+      }
+
+      if (payload.markPrice === null || payload.markPrice === undefined) {
+        setError("No live quote available right now.");
+        return;
+      }
+
+      const markPrice = payload.markPrice;
+      const underlyingLtp = payload.underlyingLtp ?? markPrice;
+
+      setState((prev) => ({
+        ...prev,
+        price: markPrice.toFixed(2),
+        underlyingLtp: underlyingLtp.toFixed(2),
+      }));
+    } catch {
+      setError("Unexpected network issue while fetching live quote.");
+    } finally {
+      setIsFetchingLive(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,9 +125,9 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
         }),
       });
 
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJsonSafely<{ error?: string }>(response);
       if (!response.ok) {
-        setError(payload.error || "Could not add execution.");
+        setError(toErrorMessage(payload, `Could not add execution (HTTP ${response.status}).`));
         return;
       }
 
@@ -85,7 +148,17 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
-      <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-700">Add entry / exit</h4>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-700">Add entry / exit</h4>
+        <button
+          type="button"
+          onClick={fetchLivePrice}
+          disabled={isFetchingLive}
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+        >
+          {isFetchingLive ? "Fetching..." : "Use live price"}
+        </button>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <select
@@ -129,7 +202,7 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
           required
           value={state.quantity}
           onChange={(event) => setState((prev) => ({ ...prev, quantity: event.target.value }))}
-          placeholder="Quantity"
+          placeholder="Quantity (lots)"
           className="rounded-lg border border-slate-300 px-3 py-2"
         />
 
@@ -143,6 +216,8 @@ export function AddCommodityExecutionForm({ tradeId }: Props) {
           className="rounded-lg border border-slate-300 px-3 py-2"
         />
       </div>
+
+      <p className="text-xs text-slate-500">1 lot = {lotSize} units</p>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <input

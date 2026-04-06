@@ -33,6 +33,7 @@ export type CommodityExecutionLike = {
 
 export type CommodityTradeLike = {
   direction: CommodityDirection;
+  lotSize?: number;
   executions: CommodityExecutionLike[];
 };
 
@@ -80,9 +81,10 @@ function signedCashflowForCommodity(
   kind: ExecutionKind,
   price: number,
   quantity: number,
+  lotSize: number,
   fees: number
 ) {
-  const notional = price * quantity;
+  const notional = price * quantity * lotSize;
 
   const isEntryLike = kind === "ENTRY" || kind === "ADJUSTMENT";
   const isSell =
@@ -169,7 +171,10 @@ export function computePositionalGroupPnl(legs: LegWithExecutions[]): PnlBreakdo
   };
 }
 
-export function computeCommodityTradePnl(trade: TradeWithExecutions): PnlBreakdown {
+export function computeCommodityTradePnl(
+  trade: TradeWithExecutions,
+  liveMarkPrice?: number
+): PnlBreakdown {
   const executions = [...trade.executions].sort(
     (a, b) => new Date(a.executedAt).getTime() - new Date(b.executedAt).getTime()
   );
@@ -177,6 +182,7 @@ export function computeCommodityTradePnl(trade: TradeWithExecutions): PnlBreakdo
   let cashflow = 0;
   let openQuantity = 0;
   let markPrice = 0;
+  const lotSize = Math.max(1, Math.trunc(trade.lotSize ?? 1));
 
   for (const execution of executions) {
     const qty = Math.max(0, execution.quantity);
@@ -186,6 +192,7 @@ export function computeCommodityTradePnl(trade: TradeWithExecutions): PnlBreakdo
       execution.kind,
       execution.price,
       qty,
+      lotSize,
       execution.fees
     );
 
@@ -198,8 +205,13 @@ export function computeCommodityTradePnl(trade: TradeWithExecutions): PnlBreakdo
     markPrice = execution.price;
   }
 
+  // Use live mark when available and position is still open.
+  if (liveMarkPrice !== undefined && openQuantity > 0) {
+    markPrice = liveMarkPrice;
+  }
+
   const directionalOpen = trade.direction === "LONG" ? openQuantity : -openQuantity;
-  const markValue = directionalOpen * markPrice;
+  const markValue = directionalOpen * markPrice * lotSize;
   const totalPnl = cashflow + markValue;
 
   return {
