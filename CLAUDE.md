@@ -9,7 +9,7 @@ A public trade journal with a private admin desk. Tracks positional option-selli
 - **Framework**: Next.js (App Router) — read `node_modules/next/dist/docs/` for any API you're unsure about
 - **Database**: PostgreSQL via Prisma (`src/lib/db.ts`)
 - **Auth**: JWT sessions via `jose` + bcrypt password hashing (`src/lib/auth.ts`)
-- **Live prices**: Dhan option chain API (`src/lib/dhan.ts`)
+- **Live prices**: Fyers option chain API (`src/lib/fyers.ts`)
 - **Styling**: Tailwind CSS
 
 ## Route layout
@@ -29,7 +29,7 @@ A public trade journal with a private admin desk. Tracks positional option-selli
 | `/desk/commodities/[tradeId]` | Auth-gated | Manage commodity executions, status |
 | `/api/admin/*` | Auth-gated | CRUD APIs for all admin operations |
 | `/api/public/*` | Public | Read-only APIs for public pages |
-| `/api/quotes/positional/[groupId]` | Public | Live LTP map from Dhan (polled by client) |
+| `/api/quotes/positional/[groupId]` | Public | Live LTP map from Fyers (polled by client) |
 
 Routes under `/admin/*` redirect permanently to `/desk/*` (`next.config.ts`).
 
@@ -70,12 +70,12 @@ Belongs to a trade. Fields: `kind`, `executedAt`, `price`, `quantity`, `underlyi
 ### `payoff.ts`
 - `buildPayoffSeries({ legs, targetDate?, currentPrice })` → `PayoffOutput` — generates a price grid and calculates `expiryPnl` (intrinsic only) and `targetPnl` (intrinsic + estimated remaining time value using sqrt-of-time decay) at each price point. Also returns `breakevens[]`.
 
-## Live pricing (`src/lib/dhan.ts`)
+## Live pricing (`src/lib/fyers.ts`)
 
-- `fetchOptionChain(underlyingSymbol, expiry)` — fetches the full option chain from Dhan (`https://api.dhan.co/v2/optionchain`).
+- `fetchOptionChain(underlyingSymbol, expiry)` — fetches the full option chain from Fyers (`https://api-t1.fyers.in/data/options-chain-v3`).
 - `fetchLegLtps(legs[], underlyingSymbol)` — batches legs by expiry, calls `fetchOptionChain` once per unique expiry, returns a `legId → ltp` map.
-- Supported underlyings: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX. Add new entries to `UNDERLYING_SCRIP` in that file.
-- Requires env: `DHAN_ACCESS_TOKEN`, `DHAN_CLIENT_ID`.
+- Supported underlyings: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, BANKEX. Add new entries to `UNDERLYING_SYMBOL` in that file.
+- Requires env: `FYERS_APP_ID`, `FYERS_ACCESS_TOKEN`.
 
 ## Live P&L component (`src/components/LivePositionalPnl.tsx`)
 
@@ -109,6 +109,6 @@ AUTH_SECRET=
 ADMIN_EMAIL=
 ADMIN_PASSWORD_HASH=   # bcrypt hash (preferred)
 ADMIN_PASSWORD=        # plain text (dev only)
-DHAN_ACCESS_TOKEN=
-DHAN_CLIENT_ID=
+FYERS_APP_ID=
+FYERS_ACCESS_TOKEN=
 ```

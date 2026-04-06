@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { fetchLegLtps } from "@/lib/dhan";
+import { fetchLegLtps } from "@/lib/fyers";
 
 export async function GET(
   _request: Request,
