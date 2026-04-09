@@ -1,0 +1,35 @@
+[2026-04-09 23:53:19] ERROR: fyers_apiv3 not installed. Install with: pip install fyers-apiv3
+[2026-04-09 23:54:12] ERROR: No access token found in environment or .env.local
+[2026-04-09 23:54:52] Starting Fyers token refresh...
+[2026-04-09 23:54:52] ERROR: Missing FYERS_APP_ID, FYERS_SECRET_KEY, or FYERS_REDIRECT_URI
+[2026-04-09 23:54:52] Set these in .env.local or environment variables before refreshing.
+[2026-04-09 23:54:52] FAILED: Token refresh incomplete
+[2026-04-09 23:55:18] Starting Fyers token refresh...
+[2026-04-09 23:55:18] ERROR: Missing FYERS_APP_ID, FYERS_SECRET_KEY, or FYERS_REDIRECT_URI
+[2026-04-09 23:55:18] Set these in .env.local or environment variables before refreshing.
+[2026-04-09 23:55:18] FAILED: Token refresh incomplete
+[2026-04-09 23:55:51] Starting Fyers token refresh...
+[2026-04-09 23:55:51] ERROR: Missing FYERS_APP_ID, FYERS_SECRET_KEY, or FYERS_REDIRECT_URI
+[2026-04-09 23:55:51] Set these in .env or environment variables before refreshing.
+[2026-04-09 23:55:51] FAILED: Token refresh incomplete
+[2026-04-09 23:56:24] Starting Fyers token refresh...
+[2026-04-09 23:56:25] ERROR: Missing FYERS_APP_ID, FYERS_SECRET_KEY, or FYERS_REDIRECT_URI
+[2026-04-09 23:56:25] Set these in .env or environment variables before refreshing.
+[2026-04-09 23:56:25] FAILED: Token refresh incomplete
+[2026-04-10 00:01:39] Starting Fyers token refresh...
+[2026-04-10 00:01:40] ERROR: Missing FYERS_APP_ID, FYERS_SECRET_KEY, or FYERS_REDIRECT_URI
+[2026-04-10 00:01:40] Set these in .env or environment variables before refreshing.
+[2026-04-10 00:01:40] FAILED: Token refresh incomplete
+[2026-04-10 00:02:54] Starting Fyers token refresh...
+[2026-04-10 00:02:54] ERROR: Missing FYERS_APP_ID, FYERS_SECRET_ID, or FYERS_REDIRECT_URI
+[2026-04-10 00:02:54] Set these in .env or environment variables before refreshing.
+[2026-04-10 00:02:54] FAILED: Token refresh incomplete
+[2026-04-10 00:03:58] Starting Fyers token refresh...
+[2026-04-10 00:03:58] ✓ Generated auth URL: https://api-t1.fyers.in/api/v3/generate-authcode?client_id=PR5MIQ39IK-100&redirect_uri=https%3A%2F%2F127.0.0.1&response_type=code&state=optional_state
+[2026-04-10 00:03:58] Please open this URL in your browser and authorize the app.
+[2026-04-10 00:04:48] ERROR: fyers_apiv3 not installed. Install with: pip install fyers-apiv3
+[2026-04-10 00:07:08] ERROR: Token refresh failed: 'SessionModel' object has no attribute 'get_token'
+[2026-04-10 00:08:15] ERROR: Failed to exchange auth code: {'code': -441, 'message': 'invalid grant type', 's': 'error'}
+[2026-04-10 00:09:05] ✓ Exchanged auth code for new token
+[2026-04-10 00:09:05] ✓ Updated .env with new token
+[2026-04-10 00:09:05] SUCCESS: Token refreshed
